@@ -1,7 +1,7 @@
 from __future__ import annotations # For return types
 
 from pathlib import Path
-from typing import Dict, List, Optional, OrderedDict
+from typing import Dict, List, Optional, OrderedDict, Tuple, Union
 from collections import OrderedDict
 from datetime import datetime
 import json
@@ -105,9 +105,9 @@ class Thread(Message):
 
     def to_markdown_s(self, users: Optional[Dict[str, User]] = None) -> str:
         return (
-            "# A thread begins here\n"
+            "## A thread begins here\n"
             + super().to_markdown_s(users) + "\n\n"
-            + "## Replies\n"
+            + "### Replies\n"
             + "\n\n".join([reply.to_markdown_s(users) for reply in self.replies])
         )
 
@@ -166,9 +166,11 @@ class User:
 
 
 class Channel:
-    def __init__(self, messages: List[Message], threads: List[Thread]) -> None:
+    
+    def __init__(self, messages: List[Message], threads: List[Thread], threaded_messages: List[Union[Thread, Message]]) -> None:
         self.messages = messages
         self.threads = threads
+        self.threaded_messages = threaded_messages
 
     @staticmethod
     def create(channel_folder: Path) -> Channel:
@@ -178,8 +180,9 @@ class Channel:
             messages.extend(file_messages)
 
         threads = Channel._make_threads(messages)
+        threaded_messages = Channel._make_threaded_messages(messages, threads)
 
-        return Channel(messages, threads)
+        return Channel(messages, threads, threaded_messages)
 
     @staticmethod
     def _make_threads(messages: List[Message]) -> List[Thread]:
@@ -198,6 +201,18 @@ class Channel:
 
         return list(threads.values())
 
+    @staticmethod
+    def _make_threaded_messages(messages: List[Message], threads: List[Thread]) -> List[Union[Thread, Message]]:
+        """Combine all messages with threaded messages create one list in chronological order both"""
+        # Remove threads from messages list since they will be added back in self-contained threads
+        messages_only = [m for m in messages if m.thread_ts is None]
+
+        # Combine messages with threads
+        threaded_messages = messages_only + threads # type: ignore
+
+        # Sort by timestamp
+        return sorted(threaded_messages, key=lambda x: x.ts)
+
 
 if __name__ == "__main__":
 
@@ -211,10 +226,13 @@ if __name__ == "__main__":
     channel = Channel.create(channel_dir)
     print(f"Found {len(channel.messages)} messages with {len(channel.threads)} discrete threads")
 
-    # Write out markdown formatted thread conversations
+    # Write out markdown formatted channels
     outdir = Path.cwd() / "md"
     outdir.mkdir(exist_ok=True)
 
-    for thread in channel.threads:
-        with open(outdir / f"{thread.thread_id}.md", "w") as f:
-            f.write(thread.to_markdown_s(users))
+    with open(outdir / f"help.md", "w") as f:
+        f.write("# Help channel, in markdown\n\n")
+        for m in channel.threaded_messages:
+            f.write(m.to_markdown_s(users) + "\n\n")
+            if isinstance(m, Thread):
+                f.write("---\n\n") # Visually close out threads
