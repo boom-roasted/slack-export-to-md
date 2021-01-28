@@ -3,6 +3,7 @@ from __future__ import annotations # For return types
 from pathlib import Path
 from typing import List, Optional, OrderedDict
 from collections import OrderedDict
+from datetime import datetime
 import json
 
 
@@ -42,8 +43,9 @@ class Message:
 
     def to_markdown_s(self) -> str:
         """Creates a markdown formatted string for this message"""
+        utc = datetime.utcfromtimestamp(float(self.ts)).strftime('%Y-%m-%d %H:%M:%S') + " UTC"
         return (
-            f"**{self.user}:** {self.text} *[{self.ts}]*"
+            f"**{self.user}:** {self.text} *[{utc}]*"
         )
 
     @staticmethod
@@ -102,7 +104,7 @@ class Thread(Message):
             f.write(self.to_markdown_s() + "\n")
             f.write("## Replies\n")
             for reply in self.replies:
-                f.write(reply.to_markdown_s() + "\n")
+                f.write(reply.to_markdown_s() + "\n\n")
 
 
     @staticmethod
