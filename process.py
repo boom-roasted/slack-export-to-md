@@ -101,7 +101,7 @@ class Thread(Message):
         with open(filepath, "w") as f:
             # Write the header
             f.write("# A generated thread\n")
-            f.write(self.to_markdown_s() + "\n")
+            f.write(self.to_markdown_s() + "\n\n")
             f.write("## Replies\n")
             for reply in self.replies:
                 f.write(reply.to_markdown_s() + "\n\n")
