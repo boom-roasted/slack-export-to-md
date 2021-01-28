@@ -49,7 +49,7 @@ class Message:
         # Use a users initials instead of their ID everywhere possible
         if users is not None:
             name = users[self.user].initials
-            text = re.sub("<@(U[A-Z0-9]{1,})>", lambda x: f"**{users[x.group(1)].initials}**", self.text)
+            text = re.sub("<@(U[A-Z0-9]{1,})>", lambda x: f"**@{users[x.group(1)].initials}**", self.text)
         else:
             name = self.user
             text = self.text
