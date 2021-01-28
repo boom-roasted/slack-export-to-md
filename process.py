@@ -5,6 +5,7 @@ from typing import Dict, List, Optional, OrderedDict
 from collections import OrderedDict
 from datetime import datetime
 import json
+import re
 
 
 known_message_subtypes = [
@@ -41,12 +42,18 @@ class Message:
         self.ts = ts
         self.thread_ts = thread_ts
 
-    def to_markdown_s(self) -> str:
+    def to_markdown_s(self, users: Optional[Dict[str, User]] = None) -> str:
         """Creates a markdown formatted string for this message"""
         utc = datetime.utcfromtimestamp(float(self.ts)).strftime('%Y-%m-%d %H:%M:%S') + " UTC"
-        return (
-            f"**{self.user}:** {self.text} *[{utc}]*"
-        )
+
+        # Use a users initials instead of their ID everywhere possible
+        if users is not None:
+            name = users[self.user].initials
+            text = re.sub("<@(U[A-Z0-9]{1,})>", lambda x: f"**{users[x.group(1)].initials}**", self.text)
+        else:
+            name = self.user
+            text = self.text
+        return f"**{name}:** {text} *[{utc}]*"
 
     @staticmethod
     def create_many(filename: Path) -> List[Message]:
@@ -96,15 +103,13 @@ class Thread(Message):
     def add_reply(self, reply: Message) -> None:
         self.replies.append(reply)
 
-    def to_markdown(self, filepath: Path) -> None:
-        """Generates markdown for this thread"""
-        with open(filepath, "w") as f:
-            # Write the header
-            f.write("# A generated thread\n")
-            f.write(self.to_markdown_s() + "\n\n")
-            f.write("## Replies\n")
-            for reply in self.replies:
-                f.write(reply.to_markdown_s() + "\n\n")
+    def to_markdown_s(self, users: Optional[Dict[str, User]] = None) -> str:
+        return (
+            "# A thread begins here\n"
+            + super().to_markdown_s(users) + "\n\n"
+            + "## Replies\n"
+            + "\n\n".join([reply.to_markdown_s(users) for reply in self.replies])
+        )
 
     @staticmethod
     def create(m: Message) -> Thread:
@@ -120,7 +125,7 @@ class User:
         self.name = name
         self.real_name = real_name
         self.real_name_normalized = real_name_normalized
-        self.initials = "".join([part[0] for part in real_name_normalized.split(" ")])
+        self.initials = "".join([part[0] for part in real_name_normalized.split(" ") if not part[0] == "("])
 
     @staticmethod
     def create(user: dict) -> User:
@@ -211,4 +216,5 @@ if __name__ == "__main__":
     outdir.mkdir(exist_ok=True)
 
     for thread in channel.threads:
-        thread.to_markdown(outdir / f"{thread.thread_id}.md")
+        with open(outdir / f"{thread.thread_id}.md", "w") as f:
+            f.write(thread.to_markdown_s(users))
