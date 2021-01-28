@@ -167,13 +167,23 @@ class User:
 
 class Channel:
     
-    def __init__(self, messages: List[Message], threads: List[Thread], threaded_messages: List[Union[Thread, Message]]) -> None:
+    def __init__(self, name: str, messages: List[Message], threads: List[Thread], threaded_messages: List[Union[Thread, Message]]) -> None:
+        self.name = name
         self.messages = messages
         self.threads = threads
         self.threaded_messages = threaded_messages
 
+    def to_markdown(self, filename: Path) -> None:
+        with open(filename, "w") as f:
+            f.write(f"# {self.name} channel, in markdown\n\n")
+            for m in self.threaded_messages:
+                f.write(m.to_markdown_s(users) + "\n\n")
+                if isinstance(m, Thread):
+                    f.write("---\n\n") # Visually close out threads
+
     @staticmethod
     def create(channel_folder: Path) -> Channel:
+        name = channel_folder.name
         messages: List[Message] = []
         for filename in channel_folder.glob("*.json"):
             file_messages = Message.create_many(filename)
@@ -182,7 +192,7 @@ class Channel:
         threads = Channel._make_threads(messages)
         threaded_messages = Channel._make_threaded_messages(messages, threads)
 
-        return Channel(messages, threads, threaded_messages)
+        return Channel(name, messages, threads, threaded_messages)
 
     @staticmethod
     def _make_threads(messages: List[Message]) -> List[Thread]:
@@ -221,18 +231,14 @@ if __name__ == "__main__":
     user_file = Path.cwd() / "export/users.json"
     users = User.create_map(user_file)
 
-    # Read channel information
-    channel_dir = Path.cwd() / "export/help"
-    channel = Channel.create(channel_dir)
-    print(f"Found {len(channel.messages)} messages with {len(channel.threads)} discrete threads")
-
-    # Write out markdown formatted channels
+    # Setup paths
+    export_dir = Path.cwd() / "export"
     outdir = Path.cwd() / "md"
     outdir.mkdir(exist_ok=True)
 
-    with open(outdir / f"help.md", "w") as f:
-        f.write("# Help channel, in markdown\n\n")
-        for m in channel.threaded_messages:
-            f.write(m.to_markdown_s(users) + "\n\n")
-            if isinstance(m, Thread):
-                f.write("---\n\n") # Visually close out threads
+    # Process channel export data and write to markdown format
+    for channel_dir in export_dir.glob("help*"):
+        channel = Channel.create(channel_dir)
+        print(f"Channel {channel_dir.name}: Found {len(channel.messages)} total messages with {len(channel.threads)} discrete threads")
+        
+        channel.to_markdown(outdir / f"{channel_dir.name}.md")
