@@ -5,7 +5,7 @@
 3. Output thread conversations in markdown format
 
 ```console
-# python process.py
+# python main.py
 ```
 
 TODO add input arguments for choosing slack channel export folder
