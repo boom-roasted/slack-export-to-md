@@ -227,7 +227,6 @@ class Channel:
 if __name__ == "__main__":
 
     # Read user information
-    # TODO combine with export markdown
     user_file = Path.cwd() / "export/users.json"
     users = User.create_map(user_file)
 
@@ -241,4 +240,7 @@ if __name__ == "__main__":
         channel = Channel.create(channel_dir)
         print(f"Channel {channel_dir.name}: Found {len(channel.messages)} total messages with {len(channel.threads)} discrete threads")
         
+        # TODO perhaps summarize threads with gensim?
+        # headline = gensim.summarization.summarize(thread.all_text, word_count=30)
+        # Or perhaps just use the first few words of the initial thread comment
         channel.to_markdown(outdir / f"{channel_dir.name}.md")
