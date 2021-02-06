@@ -225,17 +225,49 @@ class Channel:
 
 if __name__ == "__main__":
 
+    # Parse command line arguments
+    import sys
+    if len(sys.argv) == 0:
+        print("slack-export-to-md: nothing to do :)")
+        print("slack-export-to-md [-h | --help] for help")
+        sys.exit(0)
+    if len(sys.argv) == 1 and sys.argv[0] in ("-h", "--help"):
+        print("slack-export-to-md <export-dir> <glob>")
+        print("---")
+        print("Where export-dir is the directory of the unzipped slack export")
+        print("and glob is a pattern matching the names of the channels to convert to md.")
+        print("")
+        print("This program expects to find a file named 'users.json' within the export directory.")
+        print("Output will be written to a directory named 'md' next to the export directory.")
+        print("")
+        print("slack-export-to-md [-h | --help] to display this message and exit.")
+        sys.exit(0)
+    if len(sys.argv) != 3:
+        print(f"Expected two arguments, got {len(sys.argv) - 1}") # First argument is automatic self file-path
+        print("slack-export-to-md [-h | --help] for help")
+        sys.exit(1)
+
+    # Parse export directory argument
+    export_dir = Path(sys.argv[1])
+    if not export_dir.is_absolute():
+        export_dir = Path.cwd() / export_dir
+
+    if not export_dir.exists():
+        raise FileNotFoundError(f"Cannot find export directory {export_dir}")
+
+    # Parse glob search string argument
+    channel_glob = sys.argv[2]
+
     # Read user information
-    user_file = Path.cwd() / "export/users.json"
+    user_file = export_dir / "users.json"
     users = User.create_map(user_file)
 
-    # Setup paths
-    export_dir = Path.cwd() / "export"
-    outdir = Path.cwd() / "md"
+    # Setup output directory
+    outdir = export_dir / "../md"
     outdir.mkdir(exist_ok=True)
 
     # Process channel export data and write to markdown format
-    for channel_dir in export_dir.glob("help*"):
+    for channel_dir in export_dir.glob(channel_glob):
         channel = Channel.create(channel_dir)
         print(f"Channel {channel_dir.name}: Found {len(channel.messages)} total messages with {len(channel.threads)} discrete threads")
         channel.to_markdown(outdir / f"{channel_dir.name}.md")
