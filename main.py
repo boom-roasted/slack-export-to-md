@@ -105,8 +105,7 @@ class Thread(Message):
 
     def to_markdown_s(self, users: Optional[Dict[str, User]] = None) -> str:
         return (
-            "## A thread begins here\n"
-            + super().to_markdown_s(users) + "\n\n"
+            f"## {super().to_markdown_s(users)}\n\n"
             + "### Replies\n"
             + "\n\n".join([reply.to_markdown_s(users) for reply in self.replies])
         )
@@ -239,8 +238,4 @@ if __name__ == "__main__":
     for channel_dir in export_dir.glob("help*"):
         channel = Channel.create(channel_dir)
         print(f"Channel {channel_dir.name}: Found {len(channel.messages)} total messages with {len(channel.threads)} discrete threads")
-        
-        # TODO perhaps summarize threads with gensim?
-        # headline = gensim.summarization.summarize(thread.all_text, word_count=30)
-        # Or perhaps just use the first few words of the initial thread comment
         channel.to_markdown(outdir / f"{channel_dir.name}.md")
